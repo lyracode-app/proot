@@ -12,7 +12,7 @@ This repository is a fork of [termux/proot](https://github.com/termux/proot) ada
 ## Adaptations for Lyra Code
 
 Lyra Code first integrated PRoot functionality in version 3.7.0 using the
-prebuilt binaries published by [RikkaHub](https://github.com/RikkaApps). To
+prebuilt binaries published by [RikkaHub](https://github.com/rikkahub). To
 eliminate the uncertainty of depending on a third-party build, starting with
 version 3.7.1 Lyra Code switched to a self-built PRoot library. The RikkaHub
 prebuilt binaries are retained as a backup in the Lyra Code source repository
