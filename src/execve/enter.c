@@ -559,15 +559,91 @@ end:
  * Get the path to the loader for the given @tracee.  This function
  * returns NULL if an error occurred.
  */
+#if defined(PROOT_UNBUNDLE_LOADER)
+static const char *find_external_loader(const Tracee *tracee,
+		bool wants_32bit_version)
+{
+	static char loader_path[PATH_MAX];
+	static char loader32_path[PATH_MAX];
+	const char *environment_name;
+	const char *loader_name;
+	const char *configured_path;
+	char *path;
+	char *separator;
+	size_t directory_length;
+	size_t loader_name_length;
+	ssize_t path_length;
+
+	if (wants_32bit_version) {
+		environment_name = "PROOT_LOADER_32";
+		loader_name = "libproot_loader32.so";
+		path = loader32_path;
+	}
+	else {
+		environment_name = "PROOT_LOADER";
+		loader_name = "libproot_loader.so";
+		path = loader_path;
+	}
+
+	configured_path = getenv(environment_name);
+	if (configured_path != NULL && configured_path[0] != '\0')
+		return configured_path;
+
+	/* Android extracts native libraries into one ABI-specific directory.  Use
+	 * the executable's real location so this fallback also works for debug
+	 * package IDs, application clones, and secondary Android users. */
+	path_length = readlink("/proc/self/exe", path, PATH_MAX - 1);
+	if (path_length < 0) {
+		note(tracee, ERROR, SYSTEM,
+			"%s is unset and /proc/self/exe cannot be resolved",
+			environment_name);
+		return NULL;
+	}
+	if (path_length == 0 || path_length >= PATH_MAX - 1) {
+		note(tracee, ERROR, INTERNAL,
+			"%s is unset and the executable path is invalid or too long",
+			environment_name);
+		return NULL;
+	}
+	path[path_length] = '\0';
+
+	separator = strrchr(path, '/');
+	if (separator == NULL) {
+		note(tracee, ERROR, INTERNAL,
+			"%s is unset and the executable directory cannot be determined",
+			environment_name);
+		return NULL;
+	}
+
+	directory_length = (size_t) (separator + 1 - path);
+	loader_name_length = strlen(loader_name);
+	if (directory_length + loader_name_length >= PATH_MAX) {
+		note(tracee, ERROR, INTERNAL,
+			"%s is unset and the sibling loader path is too long",
+			environment_name);
+		return NULL;
+	}
+	memcpy(path + directory_length, loader_name, loader_name_length + 1);
+
+	if (access(path, X_OK) < 0) {
+		note(tracee, ERROR, SYSTEM,
+			"%s is unset and the sibling loader is not executable: %s",
+			environment_name, path);
+		return NULL;
+	}
+
+	return path;
+}
+#endif
+
 static inline const char *get_loader_path(const Tracee *tracee)
 {
 #if defined(PROOT_UNBUNDLE_LOADER)
 #if defined(HAS_LOADER_32BIT)
-	if (IS_CLASS32(tracee->load_info->elf_header)) {
-		return getenv("PROOT_LOADER_32") ?: PROOT_UNBUNDLE_LOADER "/loader32";
-	}
+	if (IS_CLASS32(tracee->load_info->elf_header))
+		return find_external_loader(tracee, true);
 #endif
-	return getenv("PROOT_LOADER") ?: PROOT_UNBUNDLE_LOADER "/loader";
+	return find_external_loader(tracee, false);
 #else
 	static char *loader_path = NULL;
 
