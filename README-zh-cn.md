@@ -17,7 +17,7 @@ Lyra Code 最早在 3.7.0 版本使用 proot 功能时，采用的是 [RikkaHub]
 
 ## 编译
 
-仓库已经附带 talloc 依赖，编译时你只需要 `cmake` 和 `ninja`，外加 Android NDK 工具链（构建目标为 arm64-v8a / Android API 24）：
+仓库已经附带 talloc 依赖，编译时你只需要 `cmake` 和 `ninja`，外加 Android NDK 工具链（构建目标为 arm64-v8a + x86_64 / Android API 24）：
 
 ```powershell
 cmake -S android -B build/android-arm64 -G Ninja `
@@ -39,3 +39,5 @@ cmake --build build/android-arm64
 - 上游 [termux/proot](https://github.com/termux/proot) 与 [PRoot](https://github.com/proot-me/PRoot)：GPLv2-or-later（见 `COPYING`）。
 - 本仓库的适配修改：以 GPLv3 协议分发（见 `LICENSE`）。
 - 附带的 `talloc-2.5.0`：LGPLv3 协议（见 `talloc-2.5.0/LICENSE`）。
+
+See [android/README.md](android/README.md) for the dual-ABI build and the 7266fb3 link2symlink fix on main.

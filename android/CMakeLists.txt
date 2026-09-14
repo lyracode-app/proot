@@ -6,15 +6,19 @@ if(NOT ANDROID)
     message(FATAL_ERROR "This build must use the Android NDK toolchain file")
 endif()
 
-if(NOT ANDROID_ABI STREQUAL "arm64-v8a")
-    message(FATAL_ERROR "The Lyra comparison build currently supports only arm64-v8a")
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+    set(PROOT_LOADER_ADDRESS 0x2000000000)
+elseif(ANDROID_ABI STREQUAL "x86_64")
+    set(PROOT_LOADER_ADDRESS 0x600000000000)
+else()
+    message(FATAL_ERROR "Supported Android ABIs: arm64-v8a, x86_64")
 endif()
 
 get_filename_component(PROOT_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../src" REALPATH)
 set(TALLOC_SOURCE_DIR "${CMAKE_CURRENT_LIST_DIR}/../talloc-2.5.0" CACHE PATH
     "Path to the unpacked talloc 2.5.0 source tree")
 get_filename_component(TALLOC_SOURCE_DIR "${TALLOC_SOURCE_DIR}" REALPATH)
-set(PROOT_VERSION "5.1.107.91-lyra.1" CACHE STRING "Version embedded in proot --version")
+set(PROOT_VERSION "5.1.107.91-lyra.2" CACHE STRING "Version embedded in proot --version")
 
 if(NOT EXISTS "${TALLOC_SOURCE_DIR}/talloc.c" OR
    NOT EXISTS "${TALLOC_SOURCE_DIR}/talloc.h" OR
@@ -143,22 +147,24 @@ target_link_options(proot_loader PRIVATE
     -nostdlib
     -Wl,--no-gc-sections
     -Wl,--build-id=none
-    -Wl,-Ttext=0x2000000000
+    -Wl,-Ttext=${PROOT_LOADER_ADDRESS}
     -Wl,--rosegment
     -Wl,-z,noexecstack
 )
 
-set(LOADER_INFO_C "${CMAKE_CURRENT_BINARY_DIR}/generated/loader-info.c")
-add_custom_command(
-    OUTPUT "${LOADER_INFO_C}"
-    COMMAND "${CMAKE_COMMAND}"
-        -DNM_TOOL=${CMAKE_NM}
-        -DLOADER_FILE=$<TARGET_FILE:proot_loader>
-        -DOUTPUT_FILE=${LOADER_INFO_C}
-        -P "${CMAKE_CURRENT_LIST_DIR}/GenerateLoaderInfo.cmake"
-    DEPENDS proot_loader "${CMAKE_CURRENT_LIST_DIR}/GenerateLoaderInfo.cmake"
-    VERBATIM
-)
+if(ANDROID_ABI STREQUAL "arm64-v8a")
+    set(LOADER_INFO_C "${CMAKE_CURRENT_BINARY_DIR}/generated/loader-info.c")
+    add_custom_command(
+        OUTPUT "${LOADER_INFO_C}"
+        COMMAND "${CMAKE_COMMAND}"
+            -DNM_TOOL=${CMAKE_NM}
+            -DLOADER_FILE=$<TARGET_FILE:proot_loader>
+            -DOUTPUT_FILE=${LOADER_INFO_C}
+            -P "${CMAKE_CURRENT_LIST_DIR}/GenerateLoaderInfo.cmake"
+        DEPENDS proot_loader "${CMAKE_CURRENT_LIST_DIR}/GenerateLoaderInfo.cmake"
+        VERBATIM
+    )
+endif()
 
 set(PROOT_SOURCES
     cli/cli.c
@@ -230,7 +236,7 @@ set(PROOT_SOURCES
 )
 list(TRANSFORM PROOT_SOURCES PREPEND "${PROOT_SOURCE_DIR}/")
 
-add_executable(proot_exec ${PROOT_SOURCES} "${LOADER_INFO_C}")
+add_executable(proot_exec ${PROOT_SOURCES} ${LOADER_INFO_C})
 set_target_properties(proot_exec PROPERTIES
     OUTPUT_NAME "libproot_exec"
     SUFFIX ".so"

@@ -28,7 +28,7 @@ fetching sources at build time.
 
 The repository already includes the vendored talloc dependency. You only need
 `cmake` and `ninja`, plus an Android NDK toolchain (the build targets
-arm64-v8a / Android API 24):
+arm64-v8a + x86_64 / Android API 24):
 
 ```powershell
 cmake -S android -B build/android-arm64 -G Ninja `
@@ -54,3 +54,5 @@ and the comparison against the RikkaHub binaries.
   [PRoot](https://github.com/proot-me/PRoot): GPLv2-or-later (see `COPYING`).
 - Modifications in this fork: distributed under the GPLv3 license (see `LICENSE`).
 - Bundled `talloc-2.5.0`: LGPLv3 (see `talloc-2.5.0/LICENSE`).
+
+See [android/README.md](android/README.md) for the dual-ABI build and the 7266fb3 link2symlink fix on main.
